@@ -1,0 +1,12 @@
+Welcome to the `zig-wayland` documentation.
+
+IMPORTANT:
+This documentation refers to the zig-0.16 branch.
+
+The `wayland_core` module is a simple API for working with both the client and server sides of the
+Wayland protocol.
+
+The `client_protocol` and `server_protocol` modules were auto-generated from many xml files by the
+zig-wayland scanner, targeting their respective sides of the protocol. The documentation found
+here comes from the xml sources, and are betterpresented on [wayland.app](https://wayland.app).
+This documentation should serve as a mapping between the Wayland spec and zig API.
