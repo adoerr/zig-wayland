@@ -119,11 +119,8 @@ pub const NextMessageError = FlushError ||
     DeserializeMessageError ||
     error{ MessageTooLong, InvalidID };
 
-pub fn nextMessage(self: *Connection, comptime Message: type, timeout: ?std.Io.Timeout) NextMessageError!Message {
-    const deadline: ?std.Io.Clock.Timestamp = if (timeout) |t|
-        t.toDeadline(self.io) catch .{ .clock = .awake, .raw = .zero }
-    else
-        .{ .clock = .awake, .raw = .zero };
+pub fn nextMessage(self: *Connection, comptime Message: type, timeout: std.Io.Timeout) NextMessageError!Message {
+    const deadline = timeout.toDeadline(self.io).toTimestamp(self.io);
 
     try self.flush();
 
@@ -249,7 +246,7 @@ pub fn flush(self: *Connection) FlushError!void {
 
     if (sent == 0) return error.ConnectionClosed;
 
-    for (fds) |fd| std.posix.close(fd);
+    for (fds) |fd| _ = std.os.linux.close(fd);
 
     self.data_out.start = 0;
     self.data_out.end = 0;
@@ -285,8 +282,7 @@ fn readIncoming(self: *Connection, deadline: ?std.Io.Clock.Timestamp) ReadIncomi
     self.fd_in.shiftToStart();
 
     const timeout_ms: i32 = if (deadline) |d| ms: {
-        const remaining = d.durationFromNow(self.io) catch
-            std.Io.Clock.Duration{ .clock = .awake, .raw = .zero };
+        const remaining = d.durationFromNow(self.io);
         break :ms if (remaining.raw.nanoseconds <= 0) 0 else @intCast(remaining.raw.toMilliseconds());
     } else -1;
 
