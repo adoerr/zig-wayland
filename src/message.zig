@@ -72,3 +72,53 @@ fn InterfaceMessageUnion(comptime Interface: type) ?type {
     const backing_enum = @Enum(u32, .exhaustive, field_names, @ptrCast(enum_values));
     return @Union(.auto, backing_enum, field_names, @ptrCast(union_types.ptr), @ptrCast(union_attrs.ptr));
 }
+
+test "MessageUnion" {
+    const std = @import("std");
+    const TestProtocol = struct {
+        pub const TestInterface = enum(u32) {
+            invalid = 0,
+            _,
+
+            pub const interface = "test_interface";
+
+            pub const Message1 = struct {
+                pub const _name = "message1";
+                pub const _signature = "u";
+                pub const _opcode = 0;
+            };
+            pub const Message2 = struct {
+                pub const _name = "message2";
+                pub const _signature = "i";
+                pub const _opcode = 1;
+            };
+        };
+    };
+
+    const Union = MessageUnion(.{TestProtocol});
+
+    // Check top level field
+    const info = @typeInfo(Union).@"union";
+    try std.testing.expectEqual(1, info.fields.len);
+    try std.testing.expectEqualStrings("test_interface", info.fields[0].name);
+
+    // Check inner union
+    const Inner = info.fields[0].type;
+    const inner_info = @typeInfo(Inner).@"union";
+    try std.testing.expectEqual(2, inner_info.fields.len);
+
+    var found_m1: bool = false;
+    var found_m2: bool = false;
+
+    inline for (inner_info.fields) |field| {
+        if (std.mem.eql(u8, field.name, "message1")) {
+            found_m1 = true;
+            try std.testing.expect(field.type == TestProtocol.TestInterface.Message1);
+        } else if (std.mem.eql(u8, field.name, "message2")) {
+            found_m2 = true;
+            try std.testing.expect(field.type == TestProtocol.TestInterface.Message2);
+        }
+    }
+    try std.testing.expect(found_m1);
+    try std.testing.expect(found_m2);
+}
